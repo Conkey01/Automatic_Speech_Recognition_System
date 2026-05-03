@@ -18,7 +18,7 @@ COPY model.py app.py ./
 ENV HF_HOME=/app/.cache/huggingface
 
 # Pre-download model weights at build time (optional but speeds up first request)
-ARG HF_REPO_ID=your-username/mini-wav2vec2-asr
+ARG HF_REPO_ID=your-username/mini-asr
 ENV HF_REPO_ID=${HF_REPO_ID}
 RUN python -c "from huggingface_hub import hf_hub_download; \
     hf_hub_download(repo_id='${HF_REPO_ID}', filename='asr_model.pth')"
