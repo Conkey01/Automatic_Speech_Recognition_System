@@ -1,10 +1,10 @@
 """app.py — FastAPI ASR inference server with CORS for browser access."""
 import io
 import os
+import subprocess
 import torch
 import numpy as np
 import soundfile as sf
-import librosa
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -12,7 +12,7 @@ from huggingface_hub import hf_hub_download
 
 from model import MiniWav2Vec2ASR
 
-HF_REPO_ID  = os.environ.get("HF_REPO_ID", "your-username/mini-wav2vec2-asr")
+HF_REPO_ID  = os.environ.get("HF_REPO_ID", "Conkey01/mini-wav2vec2-asr")
 HF_FILENAME = os.environ.get("HF_FILENAME", "asr_model.pth")
 TARGET_SR   = 16000
 
@@ -28,14 +28,37 @@ print(f"✓ Model loaded on {device}  (epoch {bundle.get('epoch')}, "
 
 app = FastAPI(title="Mini-Wav2Vec2 ASR")
 
-# ── CORS: allow any browser to call us ──
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # or restrict to ["https://your-username.github.io"]
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def decode_audio_with_ffmpeg(raw_bytes: bytes, target_sr: int = TARGET_SR) -> np.ndarray:
+    """
+    Decode any audio format (webm/opus, mp3, m4a, wav, flac, ogg, etc.)
+    by piping bytes through ffmpeg. Returns mono float32 at target_sr.
+    """
+    cmd = [
+        "ffmpeg",
+        "-loglevel", "error",
+        "-i", "pipe:0",
+        "-f", "wav",
+        "-acodec", "pcm_s16le",
+        "-ac", "1",                 # mono
+        "-ar", str(target_sr),      # resample
+        "pipe:1",
+    ]
+    proc = subprocess.run(cmd, input=raw_bytes, capture_output=True)
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"ffmpeg failed: {proc.stderr.decode('utf-8', errors='ignore')[:300]}"
+        )
+    audio, sr = sf.read(io.BytesIO(proc.stdout), dtype="float32")
+    return audio
 
 
 @app.get("/")
@@ -52,27 +75,32 @@ def health():
 @app.post("/transcribe")
 async def transcribe(file: UploadFile = File(...)):
     raw = await file.read()
+    if not raw:
+        raise HTTPException(400, "Empty upload")
 
-    # Try soundfile first (handles wav, flac, ogg natively).
-    # Fall back to librosa (handles webm, mp3, m4a from browser recordings).
+    # Fast path: try soundfile (works for wav/flac/ogg upload-from-disk)
+    audio = None
     try:
-        audio, sr = sf.read(io.BytesIO(raw), dtype="float32")
+        a, sr = sf.read(io.BytesIO(raw), dtype="float32")
+        if a.ndim > 1:
+            a = a.mean(axis=1)
+        if sr != TARGET_SR:
+            # let ffmpeg handle the resample for consistency
+            audio = None
+        else:
+            audio = a.astype(np.float32)
     except Exception:
+        audio = None
+
+    # Fallback / resample path: pipe through ffmpeg
+    if audio is None:
         try:
-            audio, sr = librosa.load(io.BytesIO(raw), sr=None, mono=False)
-            audio = audio.T if audio.ndim > 1 else audio
+            audio = decode_audio_with_ffmpeg(raw, TARGET_SR)
         except Exception as e:
             raise HTTPException(400, f"Could not decode audio: {e}")
 
-    if audio.ndim > 1:
-        audio = audio.mean(axis=1) if audio.shape[1] < audio.shape[0] else audio.mean(axis=0)
-
-    if sr != TARGET_SR:
-        audio = librosa.resample(audio.astype(np.float32),
-                                 orig_sr=sr, target_sr=TARGET_SR)
-
     if len(audio) == 0:
-        raise HTTPException(400, "Empty audio")
+        raise HTTPException(400, "Decoded audio is empty")
 
     waveform = torch.from_numpy(audio).float().to(device)
     text = model.transcribe(waveform)
