@@ -1,5 +1,5 @@
-// ⚠️ Replace this with YOUR backend URL once deployed:
-const BACKEND_URL = "https://conkey01-mini-wav2vec2-asr.hf.space";
+
+const BACKEND_URL = "https://conkey01-mini-asr.hf.space";
 
 const recordBtn = document.getElementById("recordBtn");
 const recordStatus = document.getElementById("recordStatus");
