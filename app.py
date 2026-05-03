@@ -12,7 +12,7 @@ from huggingface_hub import hf_hub_download
 
 from model import MiniWav2Vec2ASR
 
-HF_REPO_ID  = os.environ.get("HF_REPO_ID", "Conkey01/mini-wav2vec2-asr")
+HF_REPO_ID  = os.environ.get("HF_REPO_ID", "Conkey01/mini-asr")
 HF_FILENAME = os.environ.get("HF_FILENAME", "asr_model.pth")
 TARGET_SR   = 16000
 
