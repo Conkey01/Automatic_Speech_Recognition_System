@@ -1,7 +1,7 @@
 # upload_to_hf.py
 from huggingface_hub import HfApi, upload_file
 
-REPO_ID = "Conkey01/mini-wav2vec2-asr"   # change this!
+REPO_ID = "Conkey01/mini-asr"   # change this!
 
 upload_file(
     path_or_fileobj="./asr_model_deploy.pth",
