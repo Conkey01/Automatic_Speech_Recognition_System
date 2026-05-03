@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini-Wav2Vec2 ASR</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>🎤 Mini-Wav2Vec2 ASR</h1>
+    <p class="subtitle">
+      Speech recognition powered by a 44.7M-param wav2vec2-style model
+      trained from scratch on LibriSpeech.
+    </p>
+
+    <section class="card">
+      <h2>Record from your microphone</h2>
+      <div class="controls">
+        <button id="recordBtn" class="btn primary">🔴 Start recording</button>
+        <span id="recordStatus" class="status"></span>
+      </div>
+      <audio id="recordedAudio" controls hidden></audio>
+    </section>
+
+    <section class="card">
+      <h2>Or upload an audio file</h2>
+      <input type="file" id="fileInput" accept="audio/*" />
+      <p class="hint">WAV, FLAC, MP3, OGG, or WebM. Mono, ≤ 12 s works best.</p>
+    </section>
+
+    <section class="card output-card">
+      <h2>Transcription</h2>
+      <div id="output" class="output">Press record or upload a file to begin.</div>
+      <div id="meta" class="meta"></div>
+    </section>
+
+    <footer>
+      <p>
+        Backend: <code id="backend-url"></code> ·
+        <a href="https://github.com/your-username/mini-wav2vec2-app" target="_blank">Source</a>
+      </p>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

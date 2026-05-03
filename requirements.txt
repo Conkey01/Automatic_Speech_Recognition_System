@@ -1,0 +1,10 @@
+torch==2.4.0
+numpy
+soundfile
+librosa
+audioread
+ffmpeg-python
+fastapi
+uvicorn[standard]
+python-multipart
+huggingface_hub
